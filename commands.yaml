@@ -1,5 +1,12 @@
 --- 
+l: http://lmgtfy.com/?q=$1
+lmgtfy: http://lmgtfy.com/?q=$1
+mdc: http://google.com/search?q=$1+site:developer.mozilla.org
+m: http://google.com/search?q=$1+site:developer.mozilla.org
 example: http://google.com/?q=$1
 author: Joseph Pecoraro - JoePeck
-contrib: inimino, test01
+mdc2: https://developer.mozilla.org/Special:Search?search=$1
+g: http://www.google.com/search?q=$1
+google: http://www.google.com/search?q=$1
 vamp: http://slash7.com/pages/vampires
+contrib: inimino, temp01

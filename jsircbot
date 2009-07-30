@@ -87,38 +87,17 @@ public
     msg = (to.nil?) ? str : "#{to}: #{str}"
     send "PRIVMSG #{out} :#{msg}", true
   end
-  
-  def google(str)
-    "http://www.google.com/search?q=#{CGI.escape(str)}"
-  end
-  
-  def mdc(str)
-    "https://developer.mozilla.org/Special:Search?search=#{CGI.escape(str)}"
-  end
-  
-  def lmgtfy(str)
-    "http://lmgtfy.com/?q=#{CGI.escape(str)}"
-  end
-    
-  def mainurl(str)
-    case str[0,1]
-      when "g" then "http://www.google.com/"
-      when "m" then "https://developer.mozilla.org/en/JavaScript"
-      when "l" then "http://lmgtfy.com/"
-      when "v" then "http://slash7.com/pages/vampires"
-    end
-  end
 
   def admin(personSending, password, cmd, term, value)
     if password != @admin_password
-      msg "Bad Password" 
+      send "PRIVMSG #{personSending} :Bad Password"
       return
     end
 
     confirm = ""
     if cmd =~ /add/i
       if value.nil?
-        confirm = "Forgot Value"
+        confirm = "Forgot Value!"
       else
         add_command(term, value)
         confirm = "ADDED TERM #{term}"
@@ -128,14 +107,14 @@ public
       confirm = "REMOVED TERM #{term}"
     end
     
-    send "PRIVMSG #{personSending} :#{confirm}", true
+    send "PRIVMSG #{personSending} :#{confirm}"
   end
   
   def parse_cmd(cmd, terms)
     result = @commands[cmd]
     return nil if result.nil?
     if terms.nil?
-      return result
+      return result.gsub("$1", '')
     else
       return result.gsub("$1", CGI.escape(terms))
     end
@@ -167,22 +146,6 @@ public
 			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s.+\s:[\001]VERSION[\001]$/i
 				send "NOTICE #{$1} :\001VERSION Ruby-irc v0.042\001"
 			
-			# `mdc searchterms
-			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`m(?:dc)?\s+(.+?)(\s*@\s*(\S+))?$/i
-			  parsedmsg($1, $4, mdc($5), $7)
-
-			# `lmgtfy searchterms
-			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`l(?:mgtfy)?\s+(.+?)(\s*@\s*(\S+))?$/i
-			  parsedmsg($1, $4, lmgtfy($5), $7)
-
-			# `google searchterms
-			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`g(?:oogle)?\s+(.+?)(\s*@\s*(\S+))?$/i
-			  parsedmsg($1, $4, google($5), $7)
-			
-			# No search terms, give the main urls
-			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`(m(?:dc)?|l(?:mgtfy)?|g(?:oogle)?|v(?:amp)?)(\s*@\s*(\S+))?$/i
-			  parsedmsg($1, $4, mainurl($5), $7)
-
       # `list or `commands
 	    when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`(list|commands)$/i
 	      parsedmsg($1, $1, @commands.keys.sort.join(', '), $7)
