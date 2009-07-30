@@ -1,0 +1,5 @@
+--- 
+example: http://google.com/?q=$1
+author: Joseph Pecoraro - JoePeck
+contrib: inimino, test01
+vamp: http://slash7.com/pages/vampires

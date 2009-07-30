@@ -1,0 +1,243 @@
+#!/usr/bin/env ruby
+# Author: Joseph Pecoraro
+# Date: Tuesday July 28, 2009
+# Help: http://snippets.dzone.com/posts/show/1785
+# Description: IRC bot that
+#  - joins a channel
+#  - responds to some simple commands
+#  - admin interface allows for adding/removing simple commands
+#  - is just plain awesome
+
+require "socket"
+require "yaml"
+require "cgi"
+
+class IRC
+	attr_reader :server, :port, :nick, :channel, :count
+	
+	PASSWORD_FILE = ".password"
+	COMMANDS_FILE = "commands.yaml"
+	
+	def initialize(server, port, nick, channel)
+		@server, @port, @nick, @channel, @count = server, port, nick, channel, 0
+		@admin_password = nil
+		@commands = nil
+		load_password
+		load_commands
+	end
+
+private
+
+  def load_password
+    password = File.read(PASSWORD_FILE)
+    if password == "password"
+      puts "Please Change Password"
+      puts "See the '.password' file."
+      exit 1
+    else
+      @admin_password = password
+      puts "ADMIN PASSWORD: #{password}"
+      puts
+    end
+  end
+
+  def load_commands
+    @commands = YAML.load_file(COMMANDS_FILE)
+  end
+  
+  def save_commands
+    File.open(COMMANDS_FILE, "w") { |f| f.puts @commands.to_yaml }
+  end
+  
+  def add_command(term, value)
+    @commands[term] = value
+    save_commands
+  end
+  
+  def remove_command(term)
+    @commands.delete(term)
+    save_commands
+  end
+
+public
+
+	def send(s, bool=false)
+	  if bool
+	    @count += 1
+  		puts "[#{@count}] --> #{s}"
+  	else
+  	  puts "--> #{s}"
+	  end
+  	@irc.send "#{s}\n", 0
+	end
+	
+	def msg(s)
+		send "PRIVMSG #{@channel} :#{s}"
+	end
+
+	def connect()
+		@irc = TCPSocket.open(@server, @port)
+		send "USER bot JoePeckBot bogojoker.com :Joseph Pecoraro (BOT)"
+		send "NICK #{@nick}"
+		send "JOIN #{@channel}"
+	end
+  
+  def parsedmsg(personSending, channel, str, to='')
+    out = (channel==@nick) ? personSending : channel
+    msg = (to.nil?) ? str : "#{to}: #{str}"
+    send "PRIVMSG #{out} :#{msg}", true
+  end
+  
+  def google(str)
+    "http://www.google.com/search?q=#{CGI.escape(str)}"
+  end
+  
+  def mdc(str)
+    "https://developer.mozilla.org/Special:Search?search=#{CGI.escape(str)}"
+  end
+  
+  def lmgtfy(str)
+    "http://lmgtfy.com/?q=#{CGI.escape(str)}"
+  end
+    
+  def mainurl(str)
+    case str[0,1]
+      when "g" then "http://www.google.com/"
+      when "m" then "https://developer.mozilla.org/en/JavaScript"
+      when "l" then "http://lmgtfy.com/"
+      when "v" then "http://slash7.com/pages/vampires"
+    end
+  end
+
+  def admin(personSending, password, cmd, term, value)
+    if password != @admin_password
+      msg "Bad Password" 
+      return
+    end
+
+    confirm = ""
+    if cmd =~ /add/i
+      if value.nil?
+        confirm = "Forgot Value"
+      else
+        add_command(term, value)
+        confirm = "ADDED TERM #{term}"
+      end
+    elsif cmd =~ /remove/i
+      remove_command(term)
+      confirm = "REMOVED TERM #{term}"
+    end
+    
+    send "PRIVMSG #{personSending} :#{confirm}", true
+  end
+  
+  def parse_cmd(cmd, terms)
+    result = @commands[cmd]
+    return nil if result.nil?
+    if terms.nil?
+      return result
+    else
+      return result.gsub("$1", CGI.escape(terms))
+    end
+  end
+
+	
+  #  /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:EVAL (.+)$/i
+  #    $1 = The username of the person sending the message
+  #    $2 = ... some info
+  #    $3 = dns address
+  #    $4 = channel (with the #)
+  #    $5 = the person's message (the data)
+	def handle_server_input(s)
+		case s.strip
+		  
+		  # Handle Pings - puts "[ Server ping ]"
+			when /^PING :(.+)$/i
+				send "PONG :#{$1}"
+				
+			# On Join
+			when /JOIN :#{@channel}$/i
+				puts "<-- JOINED #{@channel}"
+				
+			# More Pings - "[ CTCP PING from #{$1}!#{$2}@#{$3} ]"
+			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s.+\s:[\001]PING (.+)[\001]$/i
+				send "NOTICE #{$1} :\001PING #{$4}\001"
+			
+			# Version Request - "[ CTCP VERSION from #{$1}!#{$2}@#{$3} ]"
+			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s.+\s:[\001]VERSION[\001]$/i
+				send "NOTICE #{$1} :\001VERSION Ruby-irc v0.042\001"
+			
+			# `mdc searchterms
+			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`m(?:dc)?\s+(.+?)(\s*@\s*(\S+))?$/i
+			  parsedmsg($1, $4, mdc($5), $7)
+
+			# `lmgtfy searchterms
+			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`l(?:mgtfy)?\s+(.+?)(\s*@\s*(\S+))?$/i
+			  parsedmsg($1, $4, lmgtfy($5), $7)
+
+			# `google searchterms
+			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`g(?:oogle)?\s+(.+?)(\s*@\s*(\S+))?$/i
+			  parsedmsg($1, $4, google($5), $7)
+			
+			# No search terms, give the main urls
+			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`(m(?:dc)?|l(?:mgtfy)?|g(?:oogle)?|v(?:amp)?)(\s*@\s*(\S+))?$/i
+			  parsedmsg($1, $4, mainurl($5), $7)
+
+      # `list or `commands
+	    when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`(list|commands)$/i
+	      parsedmsg($1, $1, @commands.keys.sort.join(', '), $7)
+
+			# `admin (ADD|REMOVE) password
+		  when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`admin\s+(.*?)\s+(ADD|REMOVE)\s+(\S+)(?:\s+(.*?))?$/i
+		    admin($1, $5, $6, $7, $8)
+
+			# Generic Commands
+			when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`(\S+)(?:\s+(.*?))?(\s*@\s*(\S+))?$/i
+			  result = parse_cmd($5, $6)
+			  parsedmsg($1, $4, result, $8) unless result.nil?
+
+			else
+				# puts s
+		end
+		true
+	end
+	
+	def main_loop()
+		while true
+			ready = select([@irc,$stdin], nil, nil, nil)
+			next if !ready
+			for s in ready[0]
+				if s == $stdin then
+					return if $stdin.eof
+					s = $stdin.gets
+					msg s
+				elsif s == @irc then
+					return if @irc.eof
+					s = @irc.gets
+					unless handle_server_input(s)
+						@irc.close
+						return
+					end
+				end
+			end
+		end
+	end
+
+end
+
+
+# Usage
+if ARGV.size < 4
+	puts "usage: ircbot server port nick channel"
+	puts "example: echo test | jsircbot irc.freenode.net 6667 JoePeckBotTest JoePeck"
+else
+	server, port, nick, channel = ARGV
+	channel = "##{channel}" unless channel[0] == ?#
+	puts "Connecting to: #{server}:#{port}"
+	puts "Nickname:      #{nick}"
+	puts "Channel:       #{channel}"
+	puts
+	irc = IRC.new(server, port, nick, channel)
+	irc.connect()
+	irc.main_loop()
+end
