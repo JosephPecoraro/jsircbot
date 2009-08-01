@@ -1,12 +1,19 @@
 --- 
-l: http://lmgtfy.com/?q=$1
-lmgtfy: http://lmgtfy.com/?q=$1
+prototypedocs: http://www.prototypejs.org/learn
+jquery: "The jQuery JavaScript Library => http://jquery.com/  IRC Channel => #jquery"
 mdc: http://google.com/search?q=$1+site:developer.mozilla.org
+lmgtfy: http://lmgtfy.com/?q=$1
+l: http://lmgtfy.com/?q=$1
 m: http://google.com/search?q=$1+site:developer.mozilla.org
+mootools: "The MooTools JavaScript Library => http://mootools.net/ IRC Channel => #mootools"
+jquerydocs: http://docs.jquery.com
 example: http://google.com/?q=$1
-author: Joseph Pecoraro - JoePeck
+author: Joseph Pecoraro - JoePeck - joepeck02@gmail.com
+about: http://github.com/JosephPecoraro/jsircbot/tree/master
+prototype: "The Prototype JavaScript Framework => http://www.prototypejs.org/ IRC Channel => #prototype"
 mdc2: https://developer.mozilla.org/Special:Search?search=$1
-g: http://www.google.com/search?q=$1
-google: http://www.google.com/search?q=$1
-vamp: http://slash7.com/pages/vampires
 contrib: inimino, temp01
+vamp: http://slash7.com/pages/vampires
+google: http://www.google.com/search?q=$1
+g: http://www.google.com/search?q=$1
+mootoolsdocs: http://mootools.net/docs/core
