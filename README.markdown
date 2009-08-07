@@ -3,6 +3,12 @@
 Simple IRC bot for [##javascript](irc://irc.freenode.net/##javascript).
 You can catch me on IRC as JoePeck.
 
+### Dependencies
+
+The Ruby `json` gem.  Installation is simple:
+
+    shell> sudo gem install json
+
 ### Contact Info
 
 Name: Joseph Pecoraro  
