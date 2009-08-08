@@ -5,9 +5,13 @@ You can catch me on IRC as JoePeck.
 
 ### Dependencies
 
-The Ruby `json` gem.  Installation is simple:
+The [json](http://json.rubyforge.org/) gem.  Installation is simple:
 
     shell> sudo gem install json
+
+The [htmlentities](http://htmlentities.rubyforge.org/) gem. Installation is simple:
+
+    shell> sudo gem install htmlentities
 
 ### Contact Info
 

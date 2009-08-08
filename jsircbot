@@ -9,6 +9,7 @@
 #  - is just plain awesome
 
 require "rubygems"
+require "htmlentities"
 require "open-uri"
 require "socket"
 require "json"
@@ -24,6 +25,7 @@ class IRC
   
   def initialize(server, port, nick, channel)
     @server, @port, @nick, @channel, @count = server, port, nick, channel, 0
+    @entitydecoder = HTMLEntities.new
     @admin_password = nil
     @commands = nil
     load_password
@@ -96,8 +98,8 @@ public
     url = "#{SEARCH_PREFIX}#{CGI.escape(str)}"
     json = JSON.parse( open(url).read )
     firstResult = json['responseData']['results'][0]
-    title = firstResult['titleNoFormatting']
-    href = firstResult['url']
+    title = @entitydecoder.decode( firstResult['titleNoFormatting'] )
+    href = firstResult['unescapedUrl']
     result = "#{title} - #{href}"
     parsedmsg(personSending, channel, result, to)
   end
