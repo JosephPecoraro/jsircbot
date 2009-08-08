@@ -95,13 +95,19 @@ public
   end
 
   def lucky(personSending, channel, str, to='')
-    url = "#{SEARCH_PREFIX}#{CGI.escape(str)}"
-    json = JSON.parse( open(url).read )
-    firstResult = json['responseData']['results'][0]
-    title = @entitydecoder.decode( firstResult['titleNoFormatting'] )
-    href = firstResult['unescapedUrl']
-    result = "#{title} - #{href}"
-    parsedmsg(personSending, channel, result, to)
+    begin
+      url = "#{SEARCH_PREFIX}#{CGI.escape(str)}"
+      json = JSON.parse( open(url).read )
+      results = json['responseData']['results']
+      return if results.size.zero?
+      firstResult = results[0]
+      title = @entitydecoder.decode( firstResult['titleNoFormatting'] )
+      href = firstResult['unescapedUrl']
+      result = "#{title} - #{href}"
+      parsedmsg(personSending, channel, result, to)
+    rescue
+      # do nothing
+    end
   end
 
   def admin(personSending, password, cmd, term, value)
@@ -167,7 +173,7 @@ public
         parsedmsg($1, $1, @commands.keys.sort.join(', '), $7)
 
       # `lucky
-      when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`lucky\s+(.*?)(\s*@\s*(\S+))?$/i
+      when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`lucky\s+(.+?)(\s*@\s*(\S+))?$/i
         lucky($1, $4, $5, $7)
 
       # `admin (ADD|REMOVE) password
