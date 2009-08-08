@@ -21,7 +21,7 @@ class IRC
   
   PASSWORD_FILE = ".password"
   COMMANDS_FILE = "commands.yaml"
-  SEARCH_PREFIX = "http://ajax.googleapis.com/ajax/services/search/web?v=1.0&hl=en&rsz=small&q="
+  SEARCH_PREFIX = "http://ajax.googleapis.com/ajax/services/search/web?v=1.0&hl=en&rsz=small&safe=active&q="
   
   def initialize(server, port, nick, channel)
     @server, @port, @nick, @channel, @count = server, port, nick, channel, 0
@@ -99,14 +99,17 @@ public
       url = "#{SEARCH_PREFIX}#{CGI.escape(str)}"
       json = JSON.parse( open(url).read )
       results = json['responseData']['results']
-      return if results.size.zero?
-      firstResult = results[0]
-      title = @entitydecoder.decode( firstResult['titleNoFormatting'] )
-      href = firstResult['unescapedUrl']
-      result = "#{title} - #{href}"
-      parsedmsg(personSending, channel, result, to)
+      if results.size.zero?
+        parsedmsg(personSending, channel, "No Results", to)
+      else
+        firstResult = results[0]
+        title = @entitydecoder.decode( firstResult['titleNoFormatting'] )
+        href = firstResult['unescapedUrl']
+        result = "#{title} - #{href}"
+        parsedmsg(personSending, channel, result, to)
+      end
     rescue
-      # do nothing
+      parsedmsg(personSending, channel, "No Results (Error)", to)
     end
   end
 
