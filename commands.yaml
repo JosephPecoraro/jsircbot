@@ -1,18 +1,40 @@
 --- 
+eventintro: http://www.quirksmode.org/js/introevents.html
 prototypedocs: http://www.prototypejs.org/learn
-jquery: "The jQuery JavaScript Library => http://jquery.com/  IRC Channel => #jquery"
-mdc: http://google.com/search?q=$1+site:developer.mozilla.org
-lmgtfy: http://lmgtfy.com/?q=$1
+CSSJS: "manipulating CSS from JavaScript: http://dev.opera.com/articles/view/dynamic-style-css-javascript/ https://developer.mozilla.org/en/CSS/Getting_Started/JavaScript"
+eventflow: http://dev.w3.org/2006/webapi/DOM-Level-3-Events/html/DOM3-Events.html#event-flow
+document.cookie: https://developer.mozilla.org/en/DOM/document.cookie
 l: http://lmgtfy.com/?q=$1
+lmgtfy: http://lmgtfy.com/?q=$1
+mdc: http://google.com/search?q=$1+site:developer.mozilla.org
+hotlinks: https://developer.mozilla.org/En/Documentation_hot_links
+java: "As the /topic says, this channel is *not* about Java.  Try #java"
 m: http://google.com/search?q=$1+site:developer.mozilla.org
-mootools: "The MooTools JavaScript Library => http://mootools.net/ IRC Channel => #mootools"
+testcase: "see: `minimal"
 jquerydocs: http://docs.jquery.com
-example: http://google.com/?q=$1
+mootools: "The MooTools JavaScript Library => http://mootools.net/ IRC Channel => #mootools"
+bracketnotation: https://developer.mozilla.org/En/Core_JavaScript_1.5_Reference/Operators/Member_Operators#Bracket_notation
+accessproperty: https://developer.mozilla.org/En/Core_JavaScript_1.5_Reference/Operators/Member_Operators
+spelling: Spelling and capitalization are important in programming.
 author: Joseph Pecoraro - JoePeck - joepeck02@gmail.com
-about: http://github.com/JosephPecoraro/jsircbot/tree/master
-prototype: "The Prototype JavaScript Framework => http://www.prototypejs.org/ IRC Channel => #prototype"
+dotnotation: https://developer.mozilla.org/En/Core_JavaScript_1.5_Reference/Operators/Member_Operators#Dot_notation
+ES3: "ES3 is edition 3 of ECMA-262, the ECMAScript specification: http://www.ecma-international.org/publications/standards/Ecma-262-arch.htm now obsoleted by `ES5"
+base2: "Dean Edward's Base2 (standards compatibility for lesser browsers): http://code.google.com/p/base2/"
+minimal: A minimal test case should contain precisely the HTML and JavaScript necessary to demonstrate the problem, no more and no less.  If it is more than 32 lines, it is probably not a minimal test case.
+bubble: http://www.quirksmode.org/js/events_order.html
+debugger: Debugging JavaScript is easy with the right tools!  Try the Web Inspector for Safari + Chrome http://webkit.org/blog/197/web-inspector-redesign/ or Firebug for Firefox http://getfirebug.com/ or Dragonfly for Opera http://bit.ly/rNzdz
+reEsc: "Escape regex-special characters for use with RegExp(): function reEsc(s){return s.replace(/[\\^$\\\\\\/.*+?()[\\]{}|]/g,'\\\\$&')}"
+strings: http://www.quirksmode.org/js/strings.html
 mdc2: https://developer.mozilla.org/Special:Search?search=$1
-contrib: inimino, temp01
-vamp: http://slash7.com/pages/vampires
+about: http://github.com/JosephPecoraro/jsircbot/tree/master
+ES5: "ES5 is edition 5 of ECMA-262, the ECMAScript (aka JavaScript) specification: http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-262.pdf"
 google: http://www.google.com/search?q=$1
+vamp: http://slash7.com/pages/vampires
+contrib: inimino, temp01
+===: For any primitive values o and p, o === p if o and p have the same value and type.  For any Objects o and p, o === p iff mutating o will mutate p in the same way.
+encodeURIComponent: https://developer.mozilla.org/en/Core_JavaScript_1.5_Reference/Global_Functions/encodeURIComponent
+__proto__: http://dhtmlkitchen.com/learn/js/enumeration/prototype-chain.jsp
+appendscript: var script = document.createElement('script'); script.src="..."; document.body.appendChild(script);
+shell: Links and Build Information for JavaScript Interpreters => http://bit.ly/1RYcpE
 mootoolsdocs: http://mootools.net/docs/core
+ninja: http://ejohn.org/apps/learn/
