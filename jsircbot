@@ -394,7 +394,7 @@ end
 
 # Usage
 if ARGV.size < 4
-  puts "usage: ircbot server port nick channels..."
+  puts "usage: jsircbot server port nick channels..."
   puts "example: jsircbot irc.freenode.net 6667 JoePeckBotTest #JoePeck ##javascript"
   puts
   puts "   Channels must be prefixed with their hash symbol. You may need to"
