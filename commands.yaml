@@ -15,5 +15,4 @@ mdc2: https://developer.mozilla.org/Special:Search?search=$1
 contrib: inimino, temp01
 vamp: http://slash7.com/pages/vampires
 google: http://www.google.com/search?q=$1
-g: http://www.google.com/search?q=$1
 mootoolsdocs: http://mootools.net/docs/core

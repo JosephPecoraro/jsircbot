@@ -1,0 +1,9 @@
+# Executable Parameters (required)
+timeout: 5
+tmpfile: /tmp/jsevalbot.js
+
+# Interpreters (must have the proper key, but may be removed or blank)
+spidermonkey: /Users/joe/code/mozilla-central/js/src/js
+rhino: java -jar /Users/joe/code/env-js/rhino/js.jar
+jsc: /Users/joe/WebKit/WebKitBuild/Release/jsc
+v8: /Users/joe/code/v8/v8

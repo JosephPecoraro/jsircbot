@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 # Author: Joseph Pecoraro
-# Date: Tuesday July 28, 2009
+# Date: Friday December 11, 2009
 # Help: http://snippets.dzone.com/posts/show/1785
 # Description: IRC bot that
 #  - joins a channel
@@ -11,25 +11,82 @@
 require "rubygems"
 require "htmlentities"
 require "open-uri"
+require "timeout"
 require "socket"
+require "open4"
 require "json"
 require "yaml"
 require "cgi"
 
+
+# Run and Timeout+Kill Sub Process
+# Original Source: https://www.ruby-forum.com/topic/104941
+# Modified to use open4 to gain stderr output
+def run(s, maxt = 10*60, errorIsOnStdout=false)
+  begin
+    pid, cmdin, cmdout, cmderr = Open4.popen4(s)
+  rescue Exception => e
+    $stderr << 'Execution of '+s+' has failed :' + e.to_s
+    raise "run failed"
+  end
+
+  begin
+    Timeout::timeout(maxt) do |t|
+      a = Process.waitpid2(pid)
+      if a[1].exitstatus != 0
+        $stderr << 'Error while executing ' + s
+        errorMessage = (errorIsOnStdout ? cmdout.read : cmderr.read)
+        raise errorMessage.gsub(/\n/, ' ')
+      end
+    end
+  rescue Timeout::Error => e
+    $stderr << 'Execution of '+s+' has timed out. Killing subprocess'
+    begin
+      Process.kill('KILL', pid)
+      cmdout.close; cmdin.close; cmderr.close
+    rescue Object => e
+      $stderr << 'Failed killing process : ' + e.to_s
+    end
+    raise "timeout"
+  end
+
+  out = cmdout.gets
+  cmdout.close; cmdin.close; cmderr.close
+  out
+end
+
+
 class IRC
   attr_reader :server, :port, :nick, :channel, :count
-  
+
+  # Interpreter Keys
+  V8 = 'v8'
+  JSC = 'jsc'
+  RHINO = 'rhino'
+  ALL = '__ALL__'
+  SPIDERMONKEY = 'spidermonkey'
+
+  # File Constants
   PASSWORD_FILE = ".password"
   COMMANDS_FILE = "commands.yaml"
+  INTERPRETERS_FILE = "interpreters.yaml"
+
+  # URL Constants
   SEARCH_PREFIX = "http://ajax.googleapis.com/ajax/services/search/web?v=1.0&hl=en&rsz=small&safe=active&q="
-  
-  def initialize(server, port, nick, channel)
-    @server, @port, @nick, @channel, @count = server, port, nick, channel, 0
+
+  def initialize(server, port, nick, channels)
+    @server, @port, @nick, @channels, @count = server, port, nick, channels, 0
     @entitydecoder = HTMLEntities.new
+
+    # Loaded Properties
     @admin_password = nil
+    @interpreters = nil
+    @tmp_js_file = nil
     @commands = nil
+    @timeout = nil
     load_password
     load_commands
+    load_interpreter_info
   end
 
 private
@@ -47,25 +104,36 @@ private
     end
   end
 
+  def load_interpreter_info
+    @interpreters = YAML.load_file(INTERPRETERS_FILE)
+    @tmp_js_file = @interpreters['tmpfile']
+    @timeout = @interpreters['timeout']
+    @interpreters[ALL] = ALL
+  end
+
   def load_commands
     @commands = YAML.load_file(COMMANDS_FILE)
   end
-  
+
   def save_commands
     File.open(COMMANDS_FILE, "w") { |f| f.puts @commands.to_yaml }
   end
-  
+
   def add_command(term, value)
     @commands[term] = value
     save_commands
   end
-  
+
   def remove_command(term)
     @commands.delete(term)
     save_commands
   end
 
 public
+
+  def silent_send(s)
+    @irc.send "#{s}\n", 0
+  end
 
   def send(s, bool=false)
     if bool
@@ -76,18 +144,20 @@ public
     end
     @irc.send "#{s}\n", 0
   end
-  
+
   def msg(s)
-    send "PRIVMSG #{@channel} :#{s}"
+    send "PRIVMSG #{@channels.first} :#{s}"
   end
 
   def connect()
     @irc = TCPSocket.open(@server, @port)
     send "USER bot JoePeckBot bogojoker.com :Joseph Pecoraro (BOT)"
     send "NICK #{@nick}"
-    send "JOIN #{@channel}"
+    @channels.each do |channel|
+      send "JOIN #{channel}"
+    end
   end
-  
+
   def parsedmsg(personSending, channel, str, to='')
     out = (channel==@nick) ? personSending : channel
     msg = (to.nil?) ? str : "#{to}: #{str}"
@@ -131,10 +201,10 @@ public
       remove_command(term)
       confirm = "REMOVED TERM #{term}"
     end
-    
+
     send "PRIVMSG #{personSending} :#{confirm}"
   end
-  
+
   def parse_cmd(cmd, terms)
     result = @commands[cmd]
     return nil if result.nil?
@@ -145,7 +215,100 @@ public
     end
   end
 
-  
+  def jseval(engine, personSending, channel, code, to)
+    puts "<-- CODE: #{code}"
+    code = code.gsub(/\\/, '\\\\\\\\').gsub(/"/, '\\"')
+    modded_code = "
+// Security
+(function() {
+  var whitelist = ['version', 'print'];
+  for (var i in this)
+    if (whitelist.indexOf(i) === -1)
+      delete this[i];
+})();
+
+(function() {
+
+  // Pretty Printing functions courtesy of inimino
+  // Source: http://boshi.inimino.org/3box/3box/util.js
+  function pp(o,depth){return pp_r(o,depth==undefined?8:depth)}
+
+  function pp_r(o,d){var a=[],p
+   if(!d)return '...'
+   if(o===undefined)return 'undefined'
+   if(o===null)return 'null'
+   if(typeof o=='boolean')return o.toString()
+   if(typeof o=='string')return '\"'+o.replace(/\\n/g,'\\\\n').replace(/\"/g,'\\\\\"')+'\"'
+   if(typeof o=='number')return o.toString()
+   if(o instanceof RegExp)return '/'+o.source+'/'
+   if(typeof o=='function')return '<'+o.toString().replace(/(.{32}).*/,'$1…').replace(/\\s+/g,' ')+'>'
+   if(o.constructor==Array){
+    o.forEach(function(e,i){
+     a.push(pp_r(o[i],d-1))})
+    return '['+a.join(',')+']'}
+   if(o.constructor==Date){
+    return o.toString()}
+   for(p in o) if(Object.prototype.hasOwnProperty.call(o,p))
+    a.push(p+':'+pp_r(o[p],d-1))
+   return '{'+a.join(',')+'}'}
+
+  // Run the Code and Pretty Print it
+  var res = eval(\"#{code}\");
+  print(pp(res));
+
+})();
+"
+
+    # Write the Modded Code to the temp file
+    File.open(@tmp_js_file, 'w') { |f| f.write(modded_code) }
+
+    # Create a list of the engines we will use
+    engines = [engine]
+    prefixes = ['']
+    if (engine == ALL)
+      engines  = [JSC, V8, RHINO, SPIDERMONKEY]
+      prefixes = engines.collect { |e| e + ': ' }
+    end
+
+    # Execute the Modded Code on each engine
+    engines.each_with_index do |engine, index|
+      interpreter = @interpreters[engine]
+      pre = prefixes[index];
+      next if interpreter.nil? or interpreter.empty?
+      
+      begin
+        timeout = (engine == RHINO ? @timeout+3 : @timeout) # give Rhino a little more time since it may boot the Java VM
+        res = run("#{interpreter} -f #{@tmp_js_file}", timeout, (engine == V8));
+        res = res.split(/\n/)[0] || '[empty]'
+        res = res[0..200] + '...' if res.size > 200
+        parsedmsg(personSending, channel, pre+res, to)
+      rescue RuntimeError => e
+        if e.message =~ /timeout/
+          parsedmsg(personSending, channel, pre+"Timeout.", to)
+        else
+          errorMessage = e.message.sub(/^.*?\d+.*?\s/, '') # most
+          errorMessage.gsub!(/line 1: uncaught JavaScript runtime exception:/, '') # rhino
+          errorMessage.gsub!(/\/tmp\/jsevalbot.js#\d+\(eval\)/, '') # rhino
+          errorMessage.gsub!(/\/tmp\/jsevalbot.js:\d+:/, '') # spider
+          errorMessage = errorMessage[0..200]
+          errorMessage = '[interpreter shows no error messages]' if errorMessage.size == 0
+          parsedmsg(personSending, channel, pre+"Error: "+errorMessage, to)
+        end
+      rescue Object => e
+        p e
+        parsedmsg(personSending, channel, pre+"Unhandled Error, Please Contact JoePeck.", to)
+      end
+    end
+  end
+
+  # Convenience methods
+  def jsc(a,b,c,d);          jseval(JSC,a,b,c,d);          end
+  def v8(a,b,c,d);           jseval(V8,a,b,c,d);           end
+  def rhino(a,b,c,d);        jseval(RHINO,a,b,c,d);        end
+  def spidermonkey(a,b,c,d); jseval(SPIDERMONKEY,a,b,c,d); end
+  def all(a,b,c,d);          jseval(ALL,a,b,c,d);          end
+
+
   #  /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:EVAL (.+)$/i
   #    $1 = The username of the person sending the message
   #    $2 = ... some info
@@ -154,29 +317,42 @@ public
   #    $5 = the person's message (the data)
   def handle_server_input(s)
     case s.strip
-      
+
       # Handle Pings - puts "[ Server ping ]"
       when /^PING :(.+)$/i
-        send "PONG :#{$1}"
-        
+        silent_send "PONG :#{$1}"
+
       # On Join
-      when /JOIN :#{@channel}$/i
-        puts "<-- JOINED #{@channel}"
-        
+      when /JOIN :(.+)$/i
+        puts "<-- JOINED: #{$1}"
+
       # More Pings - "[ CTCP PING from #{$1}!#{$2}@#{$3} ]"
       when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s.+\s:[\001]PING (.+)[\001]$/i
         send "NOTICE #{$1} :\001PING #{$4}\001"
-      
+
       # Version Request - "[ CTCP VERSION from #{$1}!#{$2}@#{$3} ]"
       when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s.+\s:[\001]VERSION[\001]$/i
         send "NOTICE #{$1} :\001VERSION Ruby-irc v0.042\001"
-      
+
       # `list or `commands
       when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`(list|commands)$/i
         parsedmsg($1, $1, @commands.keys.sort.join(', '), $7)
 
-      # `lucky
-      when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`lucky\s+(.+?)(\s*@\s*(\S+))?$/i
+      # generic "bot:"
+      #   $5 is the "bot" part
+      #   $6 is the source code to eval
+      when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:(.*?):\s+(.+?)$/i
+        case $5
+          when "js", "jsc"    then jsc($1, $4, $6, $1)
+          when "r", "rhino"   then rhino($1, $4, $6, $1)
+          when "sm", "spider" then spidermonkey($1, $4, $6, $1)
+          when "v8"           then v8($1, $4, $6, $1)
+          when "all"          then all($1, $4, $6, $1)
+          when "strict"       then strict($1, $4, $6, $1)
+        end
+
+      # `g or `lucky for Google Search
+      when /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:`(?:g|lucky)\s+(.+?)(\s*@\s*(\S+))?$/i
         lucky($1, $4, $5, $7)
 
       # `admin (ADD|REMOVE) password
@@ -191,7 +367,7 @@ public
     end
     true
   end
-  
+
   def main_loop()
     while true
       ready = select([@irc,$stdin], nil, nil, nil)
@@ -218,16 +394,19 @@ end
 
 # Usage
 if ARGV.size < 4
-  puts "usage: ircbot server port nick channel"
-  puts "example: jsircbot irc.freenode.net 6667 JoePeckBotTest JoePeck"
+  puts "usage: ircbot server port nick channels..."
+  puts "example: jsircbot irc.freenode.net 6667 JoePeckBotTest #JoePeck ##javascript"
+  puts
+  puts "   Channels must be prefixed with their hash symbol. You may need to"
+  puts "   escape them in your shell, for example: \\#\\#javascript"
 else
-  server, port, nick, channel = ARGV
-  channel = "##{channel}" unless channel[0] == ?#
+  server, port, nick = ARGV
+  channels = ARGV.drop(3)
   puts "Connecting to: #{server}:#{port}"
   puts "Nickname:      #{nick}"
-  puts "Channel:       #{channel}"
+  puts "Channels:      #{channels.join(' ')}"
   puts
-  irc = IRC.new(server, port, nick, channel)
+  irc = IRC.new(server, port, nick, channels)
   irc.connect()
   irc.main_loop()
 end
