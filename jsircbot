@@ -242,6 +242,7 @@ public
    if(typeof o=='number')return o.toString()
    if(o instanceof RegExp)return '/'+o.source+'/'
    if(typeof o=='function')return '<'+o.toString().replace(/(.{32}).*/,'$1…').replace(/\\s+/g,' ')+'>'
+   if(typeof o=='xml')return o.nodeKind()==='element'?o.toSource():o.toString()
    if(o.constructor==Array){
     o.forEach(function(e,i){
      a.push(pp_r(o[i],d-1))})
