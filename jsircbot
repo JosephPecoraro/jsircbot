@@ -50,7 +50,7 @@ def run(s, maxt = 10*60, errorIsOnStdout=false)
     raise "timeout"
   end
 
-  out = cmdout.gets
+  out = cmdout.read
   cmdout.close; cmdin.close; cmderr.close
   out
 end
@@ -242,7 +242,7 @@ public
    if(typeof o=='number')return o.toString()
    if(o instanceof RegExp)return '/'+o.source+'/'
    if(typeof o=='function')return '<'+o.toString().replace(/(.{32}).*/,'$1…').replace(/\\s+/g,' ')+'>'
-   if(typeof o=='xml')return o.nodeKind()==='element'?o.toSource():o.toString()
+   if(typeof o=='xml')return o.nodeKind()=='element'?o.toSource():o.toString()
    if(o.constructor==Array){
     o.forEach(function(e,i){
      a.push(pp_r(o[i],d-1))})
@@ -276,11 +276,12 @@ public
       interpreter = @interpreters[engine]
       pre = prefixes[index];
       next if interpreter.nil? or interpreter.empty?
-      
+
       begin
         timeout = (engine == RHINO ? @timeout+3 : @timeout) # give Rhino a little more time since it may boot the Java VM
         res = run("#{interpreter} -f #{@tmp_js_file}", timeout, (engine == V8));
-        res = res.split(/\n/)[0] || '[empty]'
+        lines = res.split(/[\n\r]+/)
+        res = (lines.size <= 1 ? lines[0] : lines[0..lines.size-2].join(''))
         res = res[0..200] + '...' if res.size > 200
         parsedmsg(personSending, channel, pre+res, to)
       rescue RuntimeError => e
