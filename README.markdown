@@ -29,7 +29,8 @@ The [open4](http://www.ruby-forum.com/topic/54593) gem. Installation is simple:
 ### Setup Your Bot
 
 1. Change the admin password. Just edit the `.password` file.
-2. Setup Interpreters. Just point them to the interpreters on your machine.
+2. Setup Interpreters in the `interpreters.yaml` file. Just point them
+   to the interpreters on your machine.
 3. The rest are command line arguments. Just look at the usage:
 
         usage: jsircbot server port nick channels...
