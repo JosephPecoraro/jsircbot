@@ -64,6 +64,7 @@ class IRC
   JSC = 'jsc'
   RHINO = 'rhino'
   ALL = '__ALL__'
+  MOZ = '__MOZ__'
   SPIDERMONKEY = 'spidermonkey'
 
   # File Constants
@@ -242,7 +243,7 @@ public
    if(typeof o=='number')return o.toString()
    if(o instanceof RegExp)return '/'+o.source+'/'
    if(typeof o=='function')return '<'+o.toString().replace(/(.{32}).*/,'$1…').replace(/\\s+/g,' ')+'>'
-   if(typeof o=='xml')return o.nodeKind()=='element'?o.toSource():o.toString()
+   if(typeof o=='xml')return o.toXMLString()
    if(o.constructor==Array){
     o.forEach(function(e,i){
      a.push(pp_r(o[i],d-1))})
@@ -268,6 +269,9 @@ public
     prefixes = ['']
     if (engine == ALL)
       engines  = [JSC, V8, RHINO, SPIDERMONKEY]
+      prefixes = engines.collect { |e| e + ': ' }
+    elsif (engine == MOZ)
+      engines  = [RHINO, SPIDERMONKEY]
       prefixes = engines.collect { |e| e + ': ' }
     end
 
@@ -309,6 +313,7 @@ public
   def rhino(a,b,c,d);        jseval(RHINO,a,b,c,d);        end
   def spidermonkey(a,b,c,d); jseval(SPIDERMONKEY,a,b,c,d); end
   def all(a,b,c,d);          jseval(ALL,a,b,c,d);          end
+  def moz(a,b,c,d);          jseval(MOZ,a,b,c,d);          end
 
 
   #  /^:(.+?)!(.+?)@(.+?)\sPRIVMSG\s(.+)\s:EVAL (.+)$/i
@@ -350,6 +355,7 @@ public
           when "sm", "spider" then spidermonkey($1, $4, $6, $1)
           when "v8"           then v8($1, $4, $6, $1)
           when "all"          then all($1, $4, $6, $1)
+          when "moz"          then moz($1, $4, $6, $1)
           when "strict"       then strict($1, $4, $6, $1)
         end
 

@@ -1,0 +1,12 @@
+Special Thanks to those who helped build this:
+
+  - inimino
+    - pretty printing source
+    - testing, suggestions, improvements, etc.
+
+  - sephr
+    - XML / E4X suggestions
+
+  - buu
+    - architecture ideas
+
