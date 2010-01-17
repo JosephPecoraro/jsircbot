@@ -75,8 +75,8 @@ class IRC
   # URL Constants
   SEARCH_PREFIX = "http://ajax.googleapis.com/ajax/services/search/web?v=1.0&hl=en&rsz=small&safe=active&q="
 
-  def initialize(server, port, nick, channels)
-    @server, @port, @nick, @channels, @count = server, port, nick, channels, 0
+  def initialize(server, port, nick, nickpassword, channels)
+    @server, @port, @nick, @nickpassword, @channels, @count = server, port, nick, nickpassword, channels, 0
     @entitydecoder = HTMLEntities.new
 
     # Loaded Properties
@@ -154,9 +154,8 @@ public
     @irc = TCPSocket.open(@server, @port)
     send "USER bot JoePeckBot bogojoker.com :Joseph Pecoraro (BOT)"
     send "NICK #{@nick}"
-    @channels.each do |channel|
-      send "JOIN #{channel}"
-    end
+    @channels.each { |channel| send "JOIN #{channel}" }
+    send "PRIVMSG NickServ :identify #{@nickpassword}" unless @nickpassword == "-"
   end
 
   def parsedmsg(personSending, channel, str, to='')
@@ -401,20 +400,22 @@ end
 
 
 # Usage
-if ARGV.size < 4
-  puts "usage: jsircbot server port nick channels..."
-  puts "example: jsircbot irc.freenode.net 6667 JoePeckBotTest #JoePeck ##javascript"
+if ARGV.size < 5
+  puts "usage: jsircbot server port nick password channels..."
+  puts "example: jsircbot irc.freenode.net 6667 JoePeckBotTest NickServPassword #JoePeck ##javascript"
+  puts
+  puts "   To NOT send a NickServ password, provide a - as your password."
   puts
   puts "   Channels must be prefixed with their hash symbol. You may need to"
   puts "   escape them in your shell, for example: \\#\\#javascript"
 else
-  server, port, nick = ARGV
-  channels = ARGV.drop(3)
+  server, port, nick, nickpassword = ARGV
+  channels = ARGV.drop(4)
   puts "Connecting to: #{server}:#{port}"
   puts "Nickname:      #{nick}"
   puts "Channels:      #{channels.join(' ')}"
   puts
-  irc = IRC.new(server, port, nick, channels)
+  irc = IRC.new(server, port, nick, nickpassword, channels)
   irc.connect()
   irc.main_loop()
 end
