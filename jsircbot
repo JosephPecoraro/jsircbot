@@ -227,7 +227,7 @@ public
       delete this[i];
 })();
 
-(function() {
+(function(load,readline,help,quit,gc,gcParam,trap,untrap,clear,sleep,snarf,timeout,elapsed) {
 
   // Pretty Printing functions courtesy of inimino
   // Source: http://boshi.inimino.org/3box/3box/util.js
@@ -241,7 +241,7 @@ public
    if(typeof o=='string')return '\"'+o.replace(/\\n/g,'\\\\n').replace(/\"/g,'\\\\\"')+'\"'
    if(typeof o=='number')return o.toString()
    if(o instanceof RegExp)return '/'+o.source+'/'
-   if(typeof o=='function')return '<'+o.toString().replace(/(.{32}).*/,'$1…').replace(/\\s+/g,' ')+'>'
+   if(typeof o=='function')return '<'+o.toString().replace(/(.{32}).*/,'$1\\u2026').replace(/\\s+/g,' ')+'>'
    if(typeof o=='xml')return o.toXMLString()
    if(o.constructor==Array){
     o.forEach(function(e,i){
